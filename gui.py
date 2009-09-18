@@ -3,8 +3,11 @@ from PyQt4.Qt import *
 from PyQt4.QtGui import *
 from PyQt4.QtCore import SIGNAL as S
 
+if os.name == 'nt':
+    from ctypes import windll, c_int, byref
+
 import plistlib
-plist_file = os.environ['HOME'] \
+plist_file = os.path.expanduser('~') \
            + ('\\Application Data\\' if os.name == 'nt' else '/Library/') \
            + 'kmuttwifi.plist'
 try:    reg = plistlib.readPlist(plist_file)
@@ -16,7 +19,7 @@ class Window(QDialog):
         QWidget.__init__(self)
         self.auth = auth
         self.setWindowTitle("KMUTT WiFi")
-        self.setWindowIcon(QIcon('wifi.png'))
+        self.setWindowIcon(QIcon('icon.png'))
 
         # add controls
         self.username = QLineEdit(self)
@@ -27,7 +30,7 @@ class Window(QDialog):
         self.cancel_button = QPushButton("&Cancel", self)
         self.connect(self.cancel_button, S('clicked()'), self.close)
         self.tray = Tray(self)
-        if os.name == 'nt': # according to vista interface guideline
+        if os.name == 'nt': # according to windows ux interaction guideline
             self.resize(240, 128)
             self.username_label = QLabel("Username", self)
             self.password_label = QLabel("Password", self)
@@ -42,7 +45,7 @@ class Window(QDialog):
                 Qt.WindowStaysOnTopHint |
                 Qt.WindowSystemMenuHint |
                 Qt.MSWindowsFixedSizeDialogHint))
-        else: # according to aero human interface guideline
+        else: # according to aqua human interface guideline
             self.resize(278, 128)
             self.username_label = QLabel("Username:", self)
             self.password_label = QLabel("Password:", self)
@@ -61,7 +64,6 @@ class Window(QDialog):
         # give aero glass transparency
         self.dwm = False
         if os.name == 'nt':
-            from ctypes import windll, c_int, byref
             dwm = c_int(0)
             try:
                 windll.dwmapi.DwmIsCompositionEnabled(byref(dwm))
@@ -120,31 +122,58 @@ class Window(QDialog):
         reg['password'] = str(self.auth.password)
         plistlib.writePlist(reg, plist_file)
 
-    def update_status(self, *args, **kwargs):
-        self.tray.update_status(*args, **kwargs)
+    def popup(self, message):
+        self.tray.popup(message)
+
+    def update_status(self, status, icon=''):
+        self.tray.update_status(status, icon)
 
 class Tray(QSystemTrayIcon):
     def __init__(self, win):
-        QSystemTrayIcon.__init__(self, QIcon('wifi.png'))
+        QSystemTrayIcon.__init__(self)
+        self.icons = dict((k, QIcon("%s_%s.png" % (os.name, k)))
+                          for k in ['off', 'on'])
         self.win = win
-        self.update_status("Initializing", mute=True)
-        self.show()
+        self.connect(self, S('update_icon'), self._update_icon)
         if os.name == 'nt':
             sig = S('activated(QSystemTrayIcon::ActivationReason)')
             self.connect(self, sig, self._ontray)
 
         sig = S('triggered()')
         self.menu = QMenu()
-        self.connect(self.menu.addAction("S&ettings"), sig, self.win.show)
-        self.connect(self.menu.addAction("E&xit"), sig, app.quit)
+        self.status = self.menu.addAction("KMUTT WiFi: ")
+        self.status.setEnabled(False)
+        if os.name == 'nt':
+            self.menu.addSeparator()
+            self.connect(self.menu.addAction("S&ettings..."), sig, self.win.show)
+            self.menu.addSeparator()
+            self.connect(self.menu.addAction("E&xit"), sig, self._exit)
+        else:
+            self.menu.addSeparator()
+            self.connect(self.menu.addAction("Preferences..."), sig, self.win.show)
+            self.menu.addSeparator()
+            self.connect(self.menu.addAction("Quit"), sig, self._exit)
         self.setContextMenu(self.menu)
+        self.show()
 
-    def update_status(self, status, description="", mute=False):
-        if not mute: self.showMessage(status, description)
-        self.setToolTip("KMUTT WiFi\n%s" % status)
+    def popup(self, message):
+        self.showMessage(message)
+
+    def update_status(self, status, icon=''):
+        if icon:
+            self.emit(S('update_icon'), icon)
+        self.status.setText("KMUTT WiFi: %s" % status)
+        self.setToolTip("KMUTT WiFi: %s" % status)
+
+    def _update_icon(self, icon='off'):
+        self.setIcon(self.icons[icon])
+
+    def _exit(self):
+        self.hide()
+        app.quit()
 
     def _ontray(self, reason):
-        if reason == QSystemTrayIcon.Trigger:
-            self.win.show() # TODO: show context menu here instead
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.win.show()
 
 app = QApplication(sys.argv)
