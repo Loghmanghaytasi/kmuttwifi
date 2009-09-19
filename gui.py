@@ -75,8 +75,8 @@ class Window(QDialog):
                     c_int(self.winId()), '\0\0\0\0\0\0\0\0\11\0\0\0\56\0\0\0')
                 windll.dwmapi.DwmEnableBlurBehindWindow(
                     c_int(self.winId()), '\1\0\0\0\1\0\0\0')
-                windll.UxTheme.SetWindowThemeAttribute(
-                    c_int(self.winId()), 1, '\3\0\0\0\3\0\0\0', 8)
+            windll.UxTheme.SetWindowThemeAttribute(
+                c_int(self.winId()), 1, '\3\0\0\0\3\0\0\0', 8)
 
         # load registry settings
         self.auth.username = reg['username']
