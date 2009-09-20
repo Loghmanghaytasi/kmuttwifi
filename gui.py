@@ -154,10 +154,11 @@ class Tray(QSystemTrayIcon):
             self.menu.addSeparator()
             self.connect(self.menu.addAction("Quit"), sig, self._exit)
         self.setContextMenu(self.menu)
+        self.update_status("Initializing", 'off')
         self.show()
 
-    def popup(self, message):
-        self.showMessage(message)
+    def popup(self, message, description=""):
+        self.showMessage(message, description)
 
     def update_status(self, status, icon=''):
         if icon:

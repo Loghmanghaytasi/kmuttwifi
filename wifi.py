@@ -53,21 +53,21 @@ class Monitor(Thread):
 
     def run(self):
         while True:
-            win.update_status('Checking...')
+            win.update_status("Checking...")
             status = auth.watchdog()
             if status == False:
-                win.update_status('Not Connected', 'off')
+                win.update_status("Not Connected", 'off')
                 time.sleep(15)
             elif status == True:
-                win.update_status('Connected', 'on')
+                win.update_status("Connected", 'on')
                 time.sleep(60)
             else:
-                win.popup("Logging on to KMUTT WiFi...")
-                win.update_status('Logging on...', 'off')
+                win.popup("Logging on to KMUTT WiFi...", "Please wait while you are being authenticated.")
+                win.update_status("Logging on...", 'off')
                 while not auth.authenticate():
-                    time.sleep(5)
-                win.popup("You are now logged on")
-                win.update_status('Connected', 'on')
+                    time.sleep(3)
+                win.popup("You are now logged on", "You can start browsing the Internet normally.")
+                win.update_status("Connected", 'on')
                 time.sleep(30)
 
 auth = Auther()
